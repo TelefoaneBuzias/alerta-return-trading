@@ -18,7 +18,7 @@ PAGE_URL = "https://www.returntrading.nl/available-stock/"
 STATE_FILE = os.environ.get("STATE_FILE", "state.json")
 NTFY_URL = os.environ.get("NTFY_URL", "https://ntfy.sh/")
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "").strip()
-KEYWORDS = [k.strip().lower() for k in os.environ.get("KEYWORDS", "iphone").split(",") if k.strip()]
+KEYWORDS = [k.strip().lower() for k in os.environ.get("KEYWORDS", "").split(",") if k.strip()]
 SEARCH_DESC = os.environ.get("SEARCH_DESC", "false").lower() in ("1", "true", "da", "yes")
 FAIL_ALERT_AFTER = 12  # ~1 oră de erori la rând -> te anunță o singură dată
 HTML_FILE = os.environ.get("HTML_FILE")  # doar pentru teste
@@ -90,7 +90,7 @@ def matches(p):
     return any(k in hay for k in KEYWORDS)
 
 
-def push(title, message, click=PAGE_URL, priority=5, tags=("iphone", "bell")):
+def push(title, message, click=PAGE_URL, priority=5, tags=("bell",)):
     if not NTFY_TOPIC:
         log("ATENȚIE: secretul NTFY_TOPIC nu e setat – nu trimit notificare.")
         return
@@ -145,9 +145,11 @@ def main():
 
     if first_run:
         n = sum(map(matches, products))
+        filt = f"Filtru: „{', '.join(KEYWORDS)}” ({n} din {len(products)} loturi). " if KEYWORDS \
+            else f"Acum sunt {len(products)} loturi pe site. "
         push("Monitorizarea online a pornit ✅",
-             f"Acum sunt {n} loturi cu „{', '.join(KEYWORDS) or 'orice'}” din {len(products)}. "
-             "Te anunț când apare unul nou – și cu calculatorul oprit.", priority=3, tags=("white_check_mark",))
+             filt + "Te anunț la orice lot nou" + (" care se potrivește" if KEYWORDS else "") +
+             " – și cu calculatorul oprit.", priority=3, tags=("white_check_mark",))
     elif len(fresh) == 1:
         p = fresh[0]
         push(f"Lot nou {p['batch']} – Return Trading".replace("  ", " "), p["title"], click=p["url"])

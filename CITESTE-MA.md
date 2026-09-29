@@ -1,7 +1,7 @@
 # Alertă Return Trading – varianta online (24/7)
 
 Verifică https://www.returntrading.nl/available-stock/ la ~5 minute pe serverele GitHub
-și trimite notificare pe iPhone (aplicația ntfy) când apare un lot nou cu „iphone”.
+și trimite notificare pe iPhone (aplicația ntfy) când apare orice lot nou.
 Merge și cu calculatorul oprit.
 
 ## Instalare (o singură dată)
@@ -23,8 +23,8 @@ Merge și cu calculatorul oprit.
 6. În extensia din Chrome **debifează „Trimite și pe iPhone”**, ca să nu primești fiecare alertă de două ori.
 
 ## Opțional
-- Alte cuvinte cheie: Settings → Secrets and variables → Actions → tab **Variables** →
-  New variable `KEYWORDS` = `iphone, ipad` (gol = toate loturile).
+- Doar anumite produse (ex. doar iPhone): Settings → Secrets and variables → Actions → tab **Variables** →
+  New variable `KEYWORDS` = `iphone` sau `iphone, ipad`. Fără variabilă = toate loturile.
 - Caută și în descriere: variabila `SEARCH_DESC` = `true`.
 - Oprire: Actions → Alerta Return Trading → „…” → Disable workflow.
 - Dacă site-ul nu poate fi verificat ~1 oră, primești o singură notificare „⚠️ … nu merge”.
