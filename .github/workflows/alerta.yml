@@ -1,0 +1,38 @@
+name: Alerta Return Trading
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # la fiecare 5 minute (GitHub poate întârzia câteva minute)
+  workflow_dispatch:         # buton „Run workflow” pentru rulare manuală
+
+permissions:
+  contents: write
+
+concurrency:
+  group: alerta-return-trading
+  cancel-in-progress: false
+
+jobs:
+  verifica:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verifică site-ul
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          KEYWORDS: ${{ vars.KEYWORDS || 'iphone' }}
+          SEARCH_DESC: ${{ vars.SEARCH_DESC || 'false' }}
+        run: python3 monitor.py
+
+      - name: Salvează ce a văzut
+        run: |
+          if [ -n "$(git status --porcelain state.json)" ]; then
+            git config user.name "alerta-bot"
+            git config user.email "alerta-bot@users.noreply.github.com"
+            git add state.json
+            git commit -m "actualizare stare"
+            git pull --rebase -q || true
+            git push
+          fi
