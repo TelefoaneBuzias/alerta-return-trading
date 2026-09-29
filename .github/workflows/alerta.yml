@@ -22,7 +22,7 @@ jobs:
       - name: Verifică site-ul
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-          KEYWORDS: ${{ vars.KEYWORDS || 'iphone' }}
+          KEYWORDS: ${{ vars.KEYWORDS || '' }}
           SEARCH_DESC: ${{ vars.SEARCH_DESC || 'false' }}
         run: python3 monitor.py
 
