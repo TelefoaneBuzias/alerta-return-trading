@@ -17,13 +17,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Verifică site-ul
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           KEYWORDS: ${{ vars.KEYWORDS || '' }}
           SEARCH_DESC: ${{ vars.SEARCH_DESC || 'false' }}
+          TEST_PUSH: ${{ github.event_name == 'workflow_dispatch' }}
         run: python3 monitor.py
 
       - name: Salvează ce a văzut
