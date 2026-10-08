@@ -22,6 +22,8 @@ KEYWORDS = [k.strip().lower() for k in os.environ.get("KEYWORDS", "").split(",")
 SEARCH_DESC = os.environ.get("SEARCH_DESC", "false").lower() in ("1", "true", "da", "yes")
 FAIL_ALERT_AFTER = 12  # ~1 oră de erori la rând -> te anunță o singură dată
 HTML_FILE = os.environ.get("HTML_FILE")  # doar pentru teste
+TEST_PUSH = os.environ.get("TEST_PUSH", "false").lower() == "true"  # rulare manuală = test
+LAST_PUSH = {}
 
 
 def log(*a):
@@ -91,15 +93,28 @@ def matches(p):
 
 
 def push(title, message, click=PAGE_URL, priority=5, tags=("bell",)):
+    """Trimite pe telefon. Întoarce True dacă ntfy a confirmat primirea."""
+    LAST_PUSH.clear()
+    LAST_PUSH.update(time=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"), title=title)
     if not NTFY_TOPIC:
-        log("ATENȚIE: secretul NTFY_TOPIC nu e setat – nu trimit notificare.")
-        return
+        LAST_PUSH["result"] = "NETRIMIS: lipsește secretul NTFY_TOPIC"
+        print("::error::Secretul NTFY_TOPIC lipsește sau e gol – notificarea NU a fost trimisă.", flush=True)
+        return False
     body = json.dumps({"topic": NTFY_TOPIC, "title": title, "message": message,
                        "click": click, "priority": priority, "tags": list(tags)}).encode()
     req = urllib.request.Request(NTFY_URL, data=body, method="POST",
                                  headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=20) as r:
-        log(f"Notificare trimisă ({r.status}): {title}")
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=20) as r:
+                LAST_PUSH["result"] = f"trimis OK ({r.status})"
+                log(f"Notificare trimisă ({r.status}): {title}")
+                return True
+        except Exception as e:  # noqa: BLE001
+            LAST_PUSH["result"] = f"EROARE: {e}"
+            print(f"::warning::Trimiterea către ntfy a eșuat (încercarea {attempt + 1}): {e}", flush=True)
+            time.sleep(5 * (attempt + 1))
+    return False
 
 
 def load_state():
@@ -143,6 +158,12 @@ def main():
     fresh = [] if first_run else [p for p in products if p["id"] not in seen and matches(p)]
     log(f"{len(products)} loturi, {sum(map(matches, products))} cu {KEYWORDS}, noi: {len(fresh)}")
 
+    if TEST_PUSH:
+        push("Test Return Trading 👍",
+             f"Notificările de pe GitHub ajung pe telefon. Acum sunt {len(products)} loturi pe site.",
+             priority=4, tags=("white_check_mark",))
+
+    sent_ok = True
     if first_run:
         n = sum(map(matches, products))
         filt = f"Filtru: „{', '.join(KEYWORDS)}” ({n} din {len(products)} loturi). " if KEYWORDS \
@@ -152,12 +173,19 @@ def main():
              " – și cu calculatorul oprit.", priority=3, tags=("white_check_mark",))
     elif len(fresh) == 1:
         p = fresh[0]
-        push(f"Lot nou {p['batch']} – Return Trading".replace("  ", " "), p["title"], click=p["url"])
+        sent_ok = push(f"Lot nou {p['batch']} – Return Trading".replace("  ", " "), p["title"], click=p["url"])
     elif fresh:
-        push(f"{len(fresh)} loturi noi – Return Trading",
+        sent_ok = push(f"{len(fresh)} loturi noi – Return Trading",
              "\n".join(f"{p['batch']}: {p['title']}" if p["batch"] else p["title"] for p in fresh))
 
-    state["seen"] = (state.get("seen", []) + [p["id"] for p in products if p["id"] not in seen])[-1000:]
+    # dacă trimiterea a eșuat, nu marchez loturile noi ca văzute -> reîncerc la rularea următoare
+    retry = {p["id"] for p in fresh} if not sent_ok else set()
+    state["seen"] = (state.get("seen", []) + [p["id"] for p in products
+                                               if p["id"] not in seen and p["id"] not in retry])[-1000:]
+    old = state.get("ultima_notificare") or {}
+    if LAST_PUSH and (old.get("title"), old.get("result")) != (LAST_PUSH["title"], LAST_PUSH["result"]):
+        state["ultima_notificare"] = dict(LAST_PUSH)  # nu fac commit la fiecare rulare cu aceeași eroare
+    state["canal_setat"] = bool(NTFY_TOPIC)
     # GitHub oprește programarea după 60 de zile fără activitate; o dată pe lună
     # actualizez data ca să rămână pornit.
     if state.get("heartbeat", "")[:7] != today[:7]:
