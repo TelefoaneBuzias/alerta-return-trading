@@ -1,6 +1,6 @@
 {
  "canal_setat": true,
- "fails": 1,
+ "fails": 0,
  "heartbeat": "2026-10-01",
  "seen": [
   "34764",
@@ -45,11 +45,14 @@
   "35329",
   "35369",
   "35406",
-  "35385"
+  "35385",
+  "35442",
+  "35434",
+  "35415"
  ],
  "ultima_notificare": {
   "result": "trimis OK (200)",
-  "time": "2026-10-20 06:15 UTC",
-  "title": "2 loturi noi – Return Trading"
+  "time": "2026-10-21 06:39 UTC",
+  "title": "3 loturi noi – Return Trading"
  }
 }
